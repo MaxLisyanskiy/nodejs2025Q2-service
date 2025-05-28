@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -31,13 +32,25 @@ export class UserService {
   }
 
   createUser({ login, password }: CreateUserDto): User {
+    if (!login || typeof login !== 'string') {
+      throw new BadRequestException('Login is invalid!');
+    }
+
+    if (!password || typeof password !== 'string') {
+      throw new BadRequestException('Login is invalid!');
+    }
+
     const newUser = this.userDB.create({ login, password });
     return newUser;
   }
 
   updateUser(id: string, updatePasswordDto: UpdatePasswordDto) {
     const { oldPassword, newPassword } = updatePasswordDto;
-    const user = this.getUserById(id);
+    const user = this.userDB.findOne(id);
+
+    if (!oldPassword || !newPassword) {
+      throw new BadRequestException('UpdatePasswordDto is invalid!');
+    }
 
     if (!user) {
       throw new NotFoundException('User not found!');
@@ -47,8 +60,7 @@ export class UserService {
       throw new ForbiddenException('Old password is wrong!');
     }
 
-    const updatedUser = this.userDB.update(id, user, { password: newPassword });
-    return updatedUser;
+    this.userDB.update(id, user, { password: newPassword });
   }
 
   deleteUser(id: string): void {

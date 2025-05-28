@@ -20,13 +20,12 @@ export class UserDB {
     const newUser = {
       id,
       login,
-      password,
       version: 1,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
 
-    this.users.set(id, newUser);
+    this.users.set(id, { ...newUser, password });
 
     return newUser;
   }

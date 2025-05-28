@@ -33,10 +33,10 @@ export class UserController {
   }
 
   @Put(':id')
-  updateUserStatus(
+  updateUser(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updatePasswordDto: UpdatePasswordDto,
-  ): User {
+  ): void {
     return this.userService.updateUser(id, updatePasswordDto);
   }
 
