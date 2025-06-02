@@ -5,13 +5,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { User } from './user.model';
-import { UpdatePasswordDto } from './user.types';
+import { CreateUserDto, UpdatePasswordDto } from './user.types';
 import { UserDB } from './user.db';
-
-export interface CreateUserDto {
-  login: string;
-  password: string;
-}
 
 @Injectable()
 export class UserService {
