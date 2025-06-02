@@ -4,20 +4,24 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { User } from './user.model';
 import { CreateUserDto, UpdatePasswordDto } from './user.types';
-import { UserDB } from './user.db';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { User } from './user.entity';
 
 @Injectable()
 export class UserService {
-  constructor(private readonly userDB: UserDB) {}
+  constructor(
+    @InjectRepository(User)
+    private usersRepository: Repository<User>,
+  ) {}
 
-  getAllUsers(): User[] {
-    return this.userDB.findAll();
+  async getAllUsers(): Promise<User[]> {
+    return await this.usersRepository.find();
   }
 
-  getUserById(id: string): User {
-    const user = this.userDB.findOne(id);
+  async getUserById(id: string): Promise<User> {
+    const user = await this.usersRepository.findOne({ where: { id } });
 
     if (!user) {
       throw new NotFoundException();
@@ -26,45 +30,61 @@ export class UserService {
     return user;
   }
 
-  createUser({ login, password }: CreateUserDto): User {
+  async createUser({ login, password }: CreateUserDto): Promise<Partial<User>> {
     if (!login || typeof login !== 'string') {
       throw new BadRequestException('Login is invalid!');
     }
-
     if (!password || typeof password !== 'string') {
-      throw new BadRequestException('Login is invalid!');
+      throw new BadRequestException('Password is invalid!');
     }
 
-    const newUser = this.userDB.create({ login, password });
-    return newUser;
+    const existingUser = await this.usersRepository.findOne({
+      where: { login },
+    });
+    if (existingUser) {
+      throw new BadRequestException('Login already exists');
+    }
+
+    const newUser = this.usersRepository.create({ login, password });
+    const savedUser = await this.usersRepository.save(newUser);
+
+    const { password: _, ...userWithoutPassword } = savedUser;
+
+    return userWithoutPassword;
   }
 
-  updateUser(id: string, updatePasswordDto: UpdatePasswordDto) {
+  async updateUser(
+    id: string,
+    updatePasswordDto: UpdatePasswordDto,
+  ): Promise<User> {
     const { oldPassword, newPassword } = updatePasswordDto;
-    const user = this.userDB.findOne(id);
 
     if (!oldPassword || !newPassword) {
-      throw new BadRequestException('UpdatePasswordDto is invalid!');
+      throw new BadRequestException('Invalid update data');
     }
 
+    const user = await this.usersRepository.findOne({ where: { id } });
     if (!user) {
-      throw new NotFoundException('User not found!');
+      throw new NotFoundException('User not found');
     }
 
     if (user.password !== oldPassword) {
-      throw new ForbiddenException('Old password is wrong!');
+      throw new ForbiddenException('Old password is wrong');
     }
 
-    this.userDB.update(id, user, { password: newPassword });
+    user.password = newPassword;
+    // user.version += 1;
+
+    return await this.usersRepository.save(user);
   }
 
-  deleteUser(id: string): void {
-    const user = this.userDB.findOne(id);
+  async deleteUser(id: string): Promise<void> {
+    const user = await this.usersRepository.findOne({ where: { id } });
 
     if (!user) {
-      throw new NotFoundException();
+      throw new NotFoundException('User not found');
     }
 
-    this.userDB.delete(id);
+    await this.usersRepository.delete(id);
   }
 }

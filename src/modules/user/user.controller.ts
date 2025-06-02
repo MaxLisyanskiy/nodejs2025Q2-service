@@ -10,25 +10,25 @@ import {
   HttpCode,
 } from '@nestjs/common';
 import { UserService } from './user.service';
-import { User } from './user.model';
 import { CreateUserDto, UpdatePasswordDto } from './user.types';
+import { User } from './user.entity';
 
 @Controller('user')
 export class UserController {
   constructor(private userService: UserService) {}
 
   @Get()
-  getAllUsers(): User[] {
+  getAllUsers() {
     return this.userService.getAllUsers();
   }
 
   @Get(':id')
-  getUserById(@Param('id', ParseUUIDPipe) id: string): User {
+  getUserById(@Param('id', ParseUUIDPipe) id: string) {
     return this.userService.getUserById(id);
   }
 
   @Post()
-  createUser(@Body() createUserDto: CreateUserDto): User {
+  createUser(@Body() createUserDto: CreateUserDto) {
     return this.userService.createUser(createUserDto);
   }
 
@@ -36,13 +36,13 @@ export class UserController {
   updateUser(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updatePasswordDto: UpdatePasswordDto,
-  ): void {
+  ) {
     return this.userService.updateUser(id, updatePasswordDto);
   }
 
   @Delete(':id')
   @HttpCode(204)
-  deleteUser(@Param('id', ParseUUIDPipe) id: string): void {
+  deleteUser(@Param('id', ParseUUIDPipe) id: string) {
     return this.userService.deleteUser(id);
   }
 }
