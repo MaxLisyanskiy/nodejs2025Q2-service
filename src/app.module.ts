@@ -1,31 +1,36 @@
 import { Module } from '@nestjs/common';
 import { UserModule } from './modules/user/user.module';
-import { ArtistModule } from './modules/artist/artist.module';
-import { TrackModule } from './modules/track/track.module';
-import { AlbumModule } from './modules/album/album.module';
-import { FavoriteModule } from './modules/favorite/favorite.module';
+// import { ArtistModule } from './modules/artist/artist.module';
+// import { TrackModule } from './modules/track/track.module';
+// import { AlbumModule } from './modules/album/album.module';
+// import { FavoriteModule } from './modules/favorite/favorite.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigModule } from '@nestjs/config';
-import { MysqlConnectionOptions } from 'typeorm/driver/mysql/MysqlConnectionOptions';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
-    ConfigModule.forRoot(),
-    TypeOrmModule.forRoot({
-      type: process.env.DB_TYPE as MysqlConnectionOptions['type'],
-      host: process.env.PG_HOST,
-      port: parseInt(process.env.PG_PORT),
-      username: process.env.PG_USER,
-      password: process.env.PG_PASSWORD,
-      database: process.env.PG_DB,
-      autoLoadEntities: true,
-      synchronize: true,
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        type: 'postgres',
+        host: configService.getOrThrow('PG_HOST'),
+        port: parseInt(configService.getOrThrow('PG_PORT')),
+        username: configService.getOrThrow('PG_USER'),
+        password: configService.getOrThrow('PG_PASSWORD'),
+        database: configService.getOrThrow('PG_DB'),
+        synchronize: true,
+        autoLoadEntities: true,
+      }),
+      inject: [ConfigService],
     }),
     UserModule,
-    ArtistModule,
-    TrackModule,
-    AlbumModule,
-    FavoriteModule,
+    // ArtistModule,
+    // TrackModule,
+    // AlbumModule,
+    // FavoriteModule,
   ],
   controllers: [],
   providers: [],
