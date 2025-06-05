@@ -8,6 +8,7 @@ import { CreateUserDto, UpdatePasswordDto } from './user.types';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
+import { plainToInstance } from 'class-transformer';
 
 @Injectable()
 export class UserService {
@@ -17,7 +18,9 @@ export class UserService {
   ) {}
 
   async getAllUsers(): Promise<User[]> {
-    return await this.usersRepository.find();
+    const users = await this.usersRepository.find();
+
+    return plainToInstance(User, users);
   }
 
   async getUserById(id: string): Promise<User> {
@@ -27,10 +30,10 @@ export class UserService {
       throw new NotFoundException();
     }
 
-    return user;
+    return plainToInstance(User, user);
   }
 
-  async createUser({ login, password }: CreateUserDto): Promise<Partial<User>> {
+  async createUser({ login, password }: CreateUserDto): Promise<User> {
     if (!login || typeof login !== 'string') {
       throw new BadRequestException('Login is invalid!');
     }
@@ -38,19 +41,17 @@ export class UserService {
       throw new BadRequestException('Password is invalid!');
     }
 
-    const existingUser = await this.usersRepository.findOne({
-      where: { login },
-    });
-    if (existingUser) {
-      throw new BadRequestException('Login already exists');
-    }
+    const user = {
+      login,
+      password,
+      createdAt: new Date().getTime(),
+      updatedAt: new Date().getTime(),
+    };
 
-    const newUser = this.usersRepository.create({ login, password });
+    const newUser = this.usersRepository.create(user);
     const savedUser = await this.usersRepository.save(newUser);
 
-    const { password: _, ...userWithoutPassword } = savedUser;
-
-    return userWithoutPassword;
+    return plainToInstance(User, savedUser);
   }
 
   async updateUser(
@@ -72,10 +73,13 @@ export class UserService {
       throw new ForbiddenException('Old password is wrong');
     }
 
-    user.password = newPassword;
-    // user.version += 1;
+    const updatedUser = await this.usersRepository.save({
+      ...user,
+      password: newPassword,
+      updatedAt: new Date().getTime(),
+    });
 
-    return await this.usersRepository.save(user);
+    return plainToInstance(User, updatedUser);
   }
 
   async deleteUser(id: string): Promise<void> {

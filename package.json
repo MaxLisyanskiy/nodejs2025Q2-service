@@ -16,7 +16,7 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
-    "docker:dev": "docker-compose --profile dev up --build",
+    "docker:dev": "docker-compose --profile dev up --build --watch",
     "docker:prod": "docker-compose --profile prod up --build",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest --testMatch \"<rootDir>/*.spec.ts\" --noStackTrace --runInBand",

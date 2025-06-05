@@ -108,22 +108,22 @@ services:
       - ./volumes/postgres_logs:/var/log/postgresql
 
   # pgAdmin service (PostgreSQL)
-  pgadmin:
-    image: dpage/pgadmin4
-    container_name: nestjs-pgadmin4
-    environment:
-      - PGADMIN_DEFAULT_EMAIL=admin@example.com
-      - PGADMIN_DEFAULT_PASSWORD=admin
-    ports:
-      - '5050:80'
-    depends_on:
-      - db
-    networks:
-      - custom_network
-    volumes:
-      - ./volumes/pgadmin:/var/lib/pgadmin
-    profiles:
-      - dev
+  # pgadmin:
+  #   image: dpage/pgadmin4
+  #   container_name: nestjs-pgadmin4
+  #   environment:
+  #     - PGADMIN_DEFAULT_EMAIL=admin@example.com
+  #     - PGADMIN_DEFAULT_PASSWORD=admin
+  #   ports:
+  #     - '5050:80'
+  #   depends_on:
+  #     - db
+  #   networks:
+  #     - custom_network
+  #   volumes:
+  #     - ./volumes/pgadmin:/var/lib/pgadmin
+  #   profiles:
+  #     - dev
 
   # Development service
   app-dev:
@@ -131,19 +131,29 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
+    restart: on-failure
     env_file:
       - .env
     ports:
       - '${PORT}:${PORT}'
-    volumes:
-      - .:/app
-      - /app/node_modules
+    # volumes:
+    #   - .:/usr/src/app
+    #   - /usr/src/app/node_modules
     networks:
       - custom_network
     depends_on:
       - db
     profiles:
       - dev
+    develop:
+      watch:
+        - action: sync
+          path: ./src
+          target: /app/src
+          ignore:
+            - node_modules/
+        - action: rebuild
+          path: package.json
 
   # Prodution service
   app-prod:
