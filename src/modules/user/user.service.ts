@@ -1,10 +1,9 @@
 import {
-  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { CreateUserDto, UpdatePasswordDto } from './user.types';
+import { CreateUserDto, UpdatePasswordDto } from './user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
@@ -19,7 +18,6 @@ export class UserService {
 
   async getAllUsers(): Promise<User[]> {
     const users = await this.usersRepository.find();
-
     return plainToInstance(User, users);
   }
 
@@ -34,13 +32,6 @@ export class UserService {
   }
 
   async createUser({ login, password }: CreateUserDto): Promise<User> {
-    if (!login || typeof login !== 'string') {
-      throw new BadRequestException('Login is invalid!');
-    }
-    if (!password || typeof password !== 'string') {
-      throw new BadRequestException('Password is invalid!');
-    }
-
     const user = {
       login,
       password,
@@ -59,10 +50,6 @@ export class UserService {
     updatePasswordDto: UpdatePasswordDto,
   ): Promise<User> {
     const { oldPassword, newPassword } = updatePasswordDto;
-
-    if (!oldPassword || !newPassword) {
-      throw new BadRequestException('Invalid update data');
-    }
 
     const user = await this.usersRepository.findOne({ where: { id } });
     if (!user) {

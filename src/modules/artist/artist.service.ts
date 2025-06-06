@@ -1,21 +1,23 @@
 import {
-  BadRequestException,
   forwardRef,
   Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Artist } from './artist.model';
-import { ArtistDto } from './artist.types';
-import { ArtistDB } from './artist.db';
+import { ArtistDto } from './artist.dto';
 import { AlbumService } from '../album/album.service';
 import { TrackService } from '../track/track.service';
 import { FavoriteService } from '../favorite/favorite.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Artist } from './artist.entity';
 
 @Injectable()
 export class ArtistService {
   constructor(
-    private readonly artistDB: ArtistDB,
+    @InjectRepository(Artist)
+    private artistRepository: Repository<Artist>,
+
     @Inject(forwardRef(() => FavoriteService))
     private readonly favoriteService: FavoriteService,
     @Inject(forwardRef(() => AlbumService))
@@ -24,12 +26,12 @@ export class ArtistService {
     private readonly trackService: TrackService,
   ) {}
 
-  getAll(): Artist[] {
-    return this.artistDB.findAll();
+  async getAll() {
+    return await this.artistRepository.find();
   }
 
-  getById(id: string, throwError: boolean = true): Artist {
-    const artist = this.artistDB.findOne(id);
+  async getById(id: string, throwError: boolean = true) {
+    const artist = await this.artistRepository.findOne({ where: { id } });
 
     if (!artist && throwError) {
       throw new NotFoundException();
@@ -40,55 +42,43 @@ export class ArtistService {
     return artist;
   }
 
-  create(dto: ArtistDto): Artist {
-    const { name, grammy } = dto;
-
-    if (!name || typeof name !== 'string') {
-      throw new BadRequestException('Name is invalid!');
-    }
-
-    if (!grammy || typeof grammy !== 'boolean') {
-      throw new BadRequestException('Grammy is invalid!');
-    }
-
-    return this.artistDB.create(dto);
+  async create(dto: ArtistDto) {
+    const newArtist = this.artistRepository.create(dto);
+    return await this.artistRepository.save(newArtist);
   }
 
-  update(id: string, dto: ArtistDto): Artist {
-    const { name, grammy } = dto;
-    const artist = this.artistDB.findOne(id);
-
-    if (typeof name !== 'string') {
-      throw new BadRequestException('Name is invalid!');
-    }
-
-    if (typeof grammy !== 'boolean') {
-      throw new BadRequestException('Grammy is invalid!');
-    }
+  async update(id: string, dto: ArtistDto) {
+    const artist = await this.artistRepository.findOne({ where: { id } });
 
     if (!artist) {
       throw new NotFoundException('Artist not found!');
     }
 
-    return this.artistDB.update(id, artist, dto);
+    const updated = await this.artistRepository.save({
+      ...artist,
+      ...dto,
+    });
+
+    return updated;
   }
 
-  delete(id: string): void {
-    if (!this.artistDB.findOne(id)) {
+  async delete(id: string) {
+    const artist = await this.artistRepository.findOne({ where: { id } });
+    if (!artist) {
       throw new NotFoundException();
     }
 
-    const album = this.albumService
-      .getAll()
-      .find(({ artistId }) => artistId === id);
-    const track = this.trackService
-      .getAll()
-      .find(({ artistId }) => artistId === id);
+    // const album = this.albumService
+    //   .getAll()
+    //   .find(({ artistId }) => artistId === id);
+    // const track = this.trackService
+    //   .getAll()
+    //   .find(({ artistId }) => artistId === id);
 
-    if (album) this.albumService.update(album.id, { ...album, artistId: null });
-    if (track) this.trackService.update(track.id, { ...track, artistId: null });
-    this.favoriteService.delete(id, 'artists');
+    // if (album) this.albumService.update(album.id, { ...album, artistId: null });
+    // if (track) this.trackService.update(track.id, { ...track, artistId: null });
+    // this.favoriteService.delete(id, 'artists');
 
-    this.artistDB.delete(id);
+    await this.artistRepository.delete(id);
   }
 }
