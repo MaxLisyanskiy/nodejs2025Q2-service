@@ -1,11 +1,5 @@
-import {
-  forwardRef,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { TrackDto } from './track.dto';
-import { FavoriteService } from '../favorite/favorite.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Track } from './track.entity';
 import { Repository } from 'typeorm';
@@ -15,9 +9,6 @@ export class TrackService {
   constructor(
     @InjectRepository(Track)
     private trackRepository: Repository<Track>,
-
-    @Inject(forwardRef(() => FavoriteService))
-    private readonly favoriteService: FavoriteService,
   ) {}
 
   async getAll() {
@@ -61,8 +52,6 @@ export class TrackService {
     if (!track) {
       throw new NotFoundException();
     }
-
-    // this.favoriteService.delete(id, 'tracks');
 
     await this.trackRepository.delete(id);
   }
