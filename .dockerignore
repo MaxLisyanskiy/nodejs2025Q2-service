@@ -1,4 +1,10 @@
 Dockerfile.dev
 Dockerfile.prod
+Dockerfile
+Dockerfile.database
 .dockerignore
 npm-debug.log
+dist
+node_modules
+volumes
+README.md
