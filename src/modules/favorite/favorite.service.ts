@@ -2,7 +2,7 @@ import { Injectable, UnprocessableEntityException } from '@nestjs/common';
 import { FavoritesResponse } from './favorite.types';
 import { Favorite } from './favorite.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Artist } from '../artist/artist.entity';
 import { Album } from '../album/album.entity';
 import { Track } from '../track/track.entity';
@@ -21,7 +21,7 @@ export class FavoriteService {
     private readonly trackRepository: Repository<Track>,
   ) {}
 
-  async getAll() {
+  async getAllFavsIds() {
     const [favorites] = await this.favoriteRepository.find();
 
     if (!favorites) {
@@ -33,6 +33,28 @@ export class FavoriteService {
     }
 
     return favorites;
+  }
+
+  async getAll() {
+    const favorites = await this.getAllFavsIds();
+
+    const { artists = [], albums = [], tracks = [] } = favorites;
+
+    const artistsList = await this.artistRepository.find({
+      where: { id: In(artists) },
+    });
+    const albumsList = await this.albumRepository.find({
+      where: { id: In(albums) },
+    });
+    const tracksList = await this.trackRepository.find({
+      where: { id: In(tracks) },
+    });
+
+    return {
+      artists: artistsList,
+      albums: albumsList,
+      tracks: tracksList,
+    };
   }
 
   private async validateAndGetEntity(
@@ -60,16 +82,15 @@ export class FavoriteService {
   async add(id: string, type: keyof FavoritesResponse) {
     await this.validateAndGetEntity(id, type);
 
-    const favorites = await this.getAll();
+    const favorites = await this.getAllFavsIds();
     favorites[type].push(id);
-    console.log(favorites);
     await this.favoriteRepository.save(favorites);
   }
 
   async delete(id: string, type: keyof FavoritesResponse) {
     await this.validateAndGetEntity(id, type);
 
-    const favorites = await this.getAll();
+    const favorites = await this.getAllFavsIds();
     favorites[type] = favorites[type].filter((itemId) => itemId !== id);
     await this.favoriteRepository.save(favorites);
   }

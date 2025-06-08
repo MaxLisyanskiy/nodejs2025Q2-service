@@ -30,8 +30,6 @@ export class AlbumService {
   async getById(id: string, throwError: boolean = true) {
     const album = await this.albumRepository.findOne({ where: { id } });
 
-    console.log(album, !album && throwError);
-
     if (!album && throwError) {
       throw new NotFoundException();
     } else if (!album && !throwError) {
@@ -66,14 +64,6 @@ export class AlbumService {
     if (!album) {
       throw new NotFoundException();
     }
-
-    // const track = this.trackService
-    //   .getAll()
-    //   .find(({ albumId }) => albumId === id);
-
-    // if (track) this.trackService.update(track.id, { ...track, albumId: null });
-    // this.favoriteService.delete(id, 'albums');
-
     await this.albumRepository.delete(id);
   }
 }
