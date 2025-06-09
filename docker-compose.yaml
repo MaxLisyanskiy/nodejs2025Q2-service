@@ -1,6 +1,7 @@
 services:
   db:
     container_name: nestjs-db
+    image: maxlisyanskiy/nestjs-db:latest
     build:
       context: .
       dockerfile: Dockerfile.database
@@ -19,6 +20,7 @@ services:
 
   app-dev:
     container_name: nestjs-app
+    image: maxlisyanskiy/nestjs-app:latest
     build:
       context: .
       dockerfile: Dockerfile
