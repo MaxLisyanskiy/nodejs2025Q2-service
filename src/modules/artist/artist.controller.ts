@@ -10,39 +10,35 @@ import {
   HttpCode,
 } from '@nestjs/common';
 import { ArtistService } from './artist.service';
-import { Artist } from './artist.model';
-import { ArtistDto } from './artist.types';
+import { ArtistDto } from './artist.dto';
 
 @Controller('artist')
 export class ArtistController {
   constructor(private artistService: ArtistService) {}
 
   @Get()
-  getAll(): Artist[] {
+  getAll() {
     return this.artistService.getAll();
   }
 
   @Get(':id')
-  getById(@Param('id', ParseUUIDPipe) id: string): Artist {
+  getById(@Param('id', ParseUUIDPipe) id: string) {
     return this.artistService.getById(id);
   }
 
   @Post()
-  create(@Body() dto: ArtistDto): Artist {
+  create(@Body() dto: ArtistDto) {
     return this.artistService.create(dto);
   }
 
   @Put(':id')
-  update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: ArtistDto,
-  ): Artist {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: ArtistDto) {
     return this.artistService.update(id, dto);
   }
 
   @Delete(':id')
   @HttpCode(204)
-  delete(@Param('id', ParseUUIDPipe) id: string): void {
+  delete(@Param('id', ParseUUIDPipe) id: string) {
     return this.artistService.delete(id);
   }
 }

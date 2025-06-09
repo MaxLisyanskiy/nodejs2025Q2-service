@@ -1,71 +1,97 @@
-import {
-  forwardRef,
-  Inject,
-  Injectable,
-  UnprocessableEntityException,
-} from '@nestjs/common';
-import { FavoriteDB } from './favorite.db';
+import { Injectable, UnprocessableEntityException } from '@nestjs/common';
 import { FavoritesResponse } from './favorite.types';
-import { Favorites } from './favorite.model';
-import { TrackService } from '../track/track.service';
-import { AlbumService } from '../album/album.service';
-import { ArtistService } from '../artist/artist.service';
+import { Favorite } from './favorite.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { In, Repository } from 'typeorm';
+import { Artist } from '../artist/artist.entity';
+import { Album } from '../album/album.entity';
+import { Track } from '../track/track.entity';
 
 @Injectable()
 export class FavoriteService {
   constructor(
-    private readonly favoriteDB: FavoriteDB,
-    @Inject(forwardRef(() => ArtistService))
-    private readonly artistService: ArtistService,
-    @Inject(forwardRef(() => AlbumService))
-    private readonly albumService: AlbumService,
-    @Inject(forwardRef(() => TrackService))
-    private readonly trackService: TrackService,
+    @InjectRepository(Favorite)
+    private favoriteRepository: Repository<Favorite>,
+
+    @InjectRepository(Artist)
+    private readonly artistRepository: Repository<Artist>,
+    @InjectRepository(Album)
+    private readonly albumRepository: Repository<Album>,
+    @InjectRepository(Track)
+    private readonly trackRepository: Repository<Track>,
   ) {}
 
-  getAll(): FavoritesResponse {
-    const favs = this.favoriteDB.findAll();
-    const artists = this.artistService
-      .getAll()
-      .filter(({ id }) => favs.artists.includes(id));
-    const albums = this.albumService
-      .getAll()
-      .filter(({ id }) => favs.albums.includes(id));
-    const tracks = this.trackService
-      .getAll()
-      .filter(({ id }) => favs.tracks.includes(id));
+  async getAllFavsIds() {
+    const [favorites] = await this.favoriteRepository.find();
+
+    if (!favorites) {
+      return this.favoriteRepository.create({
+        artists: [],
+        albums: [],
+        tracks: [],
+      });
+    }
+
+    return favorites;
+  }
+
+  async getAll() {
+    const favorites = await this.getAllFavsIds();
+
+    const { artists = [], albums = [], tracks = [] } = favorites;
+
+    const artistsList = await this.artistRepository.find({
+      where: { id: In(artists) },
+    });
+    const albumsList = await this.albumRepository.find({
+      where: { id: In(albums) },
+    });
+    const tracksList = await this.trackRepository.find({
+      where: { id: In(tracks) },
+    });
 
     return {
-      artists,
-      albums,
-      tracks,
+      artists: artistsList,
+      albums: albumsList,
+      tracks: tracksList,
     };
   }
 
-  private validateAndGetEntity(id: string, type: keyof Favorites): unknown {
+  private async validateAndGetEntity(
+    id: string,
+    type: keyof FavoritesResponse,
+  ) {
     const serviceMap = {
-      artists: this.artistService,
-      albums: this.albumService,
-      tracks: this.trackService,
+      artists: this.artistRepository,
+      albums: this.albumRepository,
+      tracks: this.trackRepository,
     };
 
     const service = serviceMap[type];
-    const entity = service.getById(id, false);
+    const entity = await service.findOne({ where: { id } });
+
     if (!entity) {
       throw new UnprocessableEntityException(
         `Entity not found for type ${type} with id ${id}`,
       );
     }
+
     return entity;
   }
 
-  add(id: string, type: keyof Favorites): void {
-    this.validateAndGetEntity(id, type);
-    this.favoriteDB.add(id, type);
+  async add(id: string, type: keyof FavoritesResponse) {
+    await this.validateAndGetEntity(id, type);
+
+    const favorites = await this.getAllFavsIds();
+    favorites[type].push(id);
+    await this.favoriteRepository.save(favorites);
   }
 
-  delete(id: string, type: keyof Favorites): void {
-    this.validateAndGetEntity(id, type);
-    this.favoriteDB.delete(id, type);
+  async delete(id: string, type: keyof FavoritesResponse) {
+    await this.validateAndGetEntity(id, type);
+
+    const favorites = await this.getAllFavsIds();
+    favorites[type] = favorites[type].filter((itemId) => itemId !== id);
+    await this.favoriteRepository.save(favorites);
   }
 }

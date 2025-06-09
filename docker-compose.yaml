@@ -1,0 +1,50 @@
+services:
+  db:
+    container_name: nestjs-db
+    image: maxlisyanskiy/nestjs-db:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.database
+    restart: always
+    environment:
+      - POSTGRES_USER=${PG_USER}
+      - POSTGRES_PASSWORD=${PG_PASSWORD}
+      - POSTGRES_DB=${PG_DB}
+    ports:
+      - '${PG_PORT}:${PG_PORT}'
+    networks:
+      - custom_network
+    volumes:
+      - ./volumes/postgres_data:/var/lib/postgresql/data
+      - ./volumes/postgres_logs:/var/log/postgresql
+
+  app-dev:
+    container_name: nestjs-app
+    image: maxlisyanskiy/nestjs-app:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: on-failure
+    env_file:
+      - .env
+    ports:
+      - '${PORT}:${PORT}'
+    networks:
+      - custom_network
+    depends_on:
+      - db
+    profiles:
+      - dev
+    develop:
+      watch:
+        - action: sync
+          path: ./src
+          target: /app/src
+          ignore:
+            - node_modules/
+        - action: rebuild
+          path: package.json
+
+networks:
+  custom_network:
+    driver: bridge

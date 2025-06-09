@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class TrackDto {
   @IsNotEmpty()
@@ -6,10 +6,12 @@ export class TrackDto {
   name: string;
 
   @IsString()
-  artistId: string;
+  @IsOptional()
+  artistId?: string;
 
   @IsString()
-  albumId: string;
+  @IsOptional()
+  albumId?: string;
 
   @IsNotEmpty()
   @IsNumber()

@@ -1,32 +1,22 @@
-import {
-  BadRequestException,
-  forwardRef,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
-import { Album } from './album.model';
-import { AlbumDB } from './album.db';
-import { AlbumDto } from './album.types';
-import { FavoriteService } from '../favorite/favorite.service';
-import { TrackService } from '../track/track.service';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { AlbumDto } from './album.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Album } from './album.entity';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class AlbumService {
   constructor(
-    private readonly albumDB: AlbumDB,
-    @Inject(forwardRef(() => FavoriteService))
-    private readonly favoriteService: FavoriteService,
-    @Inject(forwardRef(() => TrackService))
-    private readonly trackService: TrackService,
+    @InjectRepository(Album)
+    private albumRepository: Repository<Album>,
   ) {}
 
-  getAll(): Album[] {
-    return this.albumDB.findAll();
+  async getAll() {
+    return await this.albumRepository.find();
   }
 
-  getById(id: string, throwError: boolean = true): Album {
-    const album = this.albumDB.findOne(id);
+  async getById(id: string, throwError: boolean = true) {
+    const album = await this.albumRepository.findOne({ where: { id } });
 
     if (!album && throwError) {
       throw new NotFoundException();
@@ -37,52 +27,31 @@ export class AlbumService {
     return album;
   }
 
-  create(dto: AlbumDto): Album {
-    const { name, year } = dto;
-
-    if (typeof name !== 'string') {
-      throw new BadRequestException('Name is invalid!');
-    }
-
-    if (typeof year !== 'number') {
-      throw new BadRequestException('Year is invalid!');
-    }
-
-    const newUser = this.albumDB.create(dto);
-    return newUser;
+  async create(dto: AlbumDto) {
+    const newAlbum = this.albumRepository.create(dto);
+    return await this.albumRepository.save(newAlbum);
   }
 
-  update(id: string, dto: Partial<AlbumDto>): Album {
-    const { name, year } = dto;
-    const album = this.albumDB.findOne(id);
-
-    if (typeof name !== 'string') {
-      throw new BadRequestException('Name is invalid!');
-    }
-
-    if (typeof year !== 'number') {
-      throw new BadRequestException('Year is invalid!');
-    }
+  async update(id: string, dto: Partial<AlbumDto>) {
+    const album = await this.albumRepository.findOne({ where: { id } });
 
     if (!album) {
       throw new NotFoundException('Album not found!');
     }
 
-    return this.albumDB.update(id, album, dto);
+    const updated = await this.albumRepository.save({
+      ...album,
+      ...dto,
+    });
+
+    return updated;
   }
 
-  delete(id: string): void {
-    if (!this.albumDB.findOne(id)) {
+  async delete(id: string) {
+    const album = await this.albumRepository.findOne({ where: { id } });
+    if (!album) {
       throw new NotFoundException();
     }
-
-    const track = this.trackService
-      .getAll()
-      .find(({ albumId }) => albumId === id);
-
-    if (track) this.trackService.update(track.id, { ...track, albumId: null });
-    this.favoriteService.delete(id, 'albums');
-
-    this.albumDB.delete(id);
+    await this.albumRepository.delete(id);
   }
 }

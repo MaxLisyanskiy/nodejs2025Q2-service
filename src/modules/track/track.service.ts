@@ -1,29 +1,22 @@
-import {
-  BadRequestException,
-  forwardRef,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
-import { Track } from './track.model';
-import { TrackDto } from './track.types';
-import { TrackDB } from './track.db';
-import { FavoriteService } from '../favorite/favorite.service';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { TrackDto } from './track.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Track } from './track.entity';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class TrackService {
   constructor(
-    private readonly trackDB: TrackDB,
-    @Inject(forwardRef(() => FavoriteService))
-    private readonly favoriteService: FavoriteService,
+    @InjectRepository(Track)
+    private trackRepository: Repository<Track>,
   ) {}
 
-  getAll(): Track[] {
-    return this.trackDB.findAll();
+  async getAll() {
+    return await this.trackRepository.find();
   }
 
-  getById(id: string, throwError: boolean = true): Track {
-    const track = this.trackDB.findOne(id);
+  async getById(id: string, throwError: boolean = true) {
+    const track = await this.trackRepository.findOne({ where: { id } });
 
     if (!track && throwError) {
       throw new NotFoundException();
@@ -34,46 +27,32 @@ export class TrackService {
     return track;
   }
 
-  create(dto: TrackDto): Track {
-    const { name, duration } = dto;
-
-    if (typeof name !== 'string') {
-      throw new BadRequestException('Name is invalid!');
-    }
-
-    if (typeof duration !== 'number') {
-      throw new BadRequestException('Duration is invalid!');
-    }
-
-    const newTrack = this.trackDB.create(dto);
-    return newTrack;
+  async create(dto: TrackDto) {
+    const newTrack = this.trackRepository.create(dto);
+    return await this.trackRepository.save(newTrack);
   }
 
-  update(id: string, dto: Partial<TrackDto>): Track {
-    const { name, duration } = dto;
-    const track = this.trackDB.findOne(id);
-
-    if (typeof name !== 'string') {
-      throw new BadRequestException('Name is invalid!');
-    }
-
-    if (typeof duration !== 'number') {
-      throw new BadRequestException('Duration is invalid!');
-    }
+  async update(id: string, dto: Partial<TrackDto>) {
+    const track = await this.trackRepository.findOne({ where: { id } });
 
     if (!track) {
       throw new NotFoundException('Track not found!');
     }
 
-    return this.trackDB.update(id, track, dto);
+    const updated = await this.trackRepository.save({
+      ...track,
+      ...dto,
+    });
+
+    return updated;
   }
 
-  delete(id: string): void {
-    if (!this.trackDB.findOne(id)) {
+  async delete(id: string) {
+    const track = await this.trackRepository.findOne({ where: { id } });
+    if (!track) {
       throw new NotFoundException();
     }
 
-    this.favoriteService.delete(id, 'tracks');
-    this.trackDB.delete(id);
+    await this.trackRepository.delete(id);
   }
 }
