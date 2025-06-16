@@ -31,6 +31,14 @@ export class UserService {
     return plainToInstance(User, user);
   }
 
+  async getUserByLogin(login: string) {
+    const user = await this.usersRepository.findOne({
+      where: { login },
+    });
+
+    return user;
+  }
+
   async createUser({ login, password }: CreateUserDto): Promise<User> {
     const user = {
       login,
@@ -38,7 +46,6 @@ export class UserService {
       createdAt: new Date().getTime(),
       updatedAt: new Date().getTime(),
     };
-
     const newUser = this.usersRepository.create(user);
     const savedUser = await this.usersRepository.save(newUser);
 
