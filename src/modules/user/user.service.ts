@@ -46,7 +46,7 @@ export class UserService {
       createdAt: new Date().getTime(),
       updatedAt: new Date().getTime(),
     };
-
+    console.log(login, password, user);
     const newUser = this.usersRepository.create(user);
     const savedUser = await this.usersRepository.save(newUser);
 

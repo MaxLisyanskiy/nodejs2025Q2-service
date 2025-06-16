@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UserModule } from 'src/modules/user/user.module';
@@ -9,18 +9,23 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
   providers: [AuthService],
   controllers: [AuthController],
   imports: [
-    UserModule,
+    forwardRef(() => UserModule),
     ConfigModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET_KEY'),
+        secret: configService.getOrThrow<string>('JWT_SECRET_KEY'),
         signOptions: {
-          expiresIn: configService.get<string>('TOKEN_EXPIRE_TIME'),
+          algorithm: 'HS256',
+        },
+        verifyOptions: {
+          algorithms: ['HS256'],
+          ignoreExpiration: false,
         },
       }),
     }),
   ],
+  exports: [AuthService, JwtModule],
 })
 export class AuthModule {}
